@@ -132,5 +132,61 @@ def main():
     os.remove(f"{folder_path}/{name}.mp4")
     print(f"Decryption complete. Files saved to {folder_path}/{name}")
 
+    # Add audio to the video
+    dic_audio = {}
+    for filename in os.listdir(f"{folder_path}/{name}"):
+        if filename.endswith(".m4a"):
+            aux = filename.split(".")
+            language = aux[len(aux) - 2]
+            dic_audio[language] = filename
+    command = f'ffmpeg -i "{decrypted_video_path}"'
+    for index, (language, filename) in enumerate(dic_audio.items()):
+        command += f' -i "{folder_path}/{name}/{filename}"'
+    command += ' -map 0:v'
+    for index in range(len(dic_audio)):
+        command += f' -map {index + 1}:a'
+    command += ' -c copy'
+    for index, language in enumerate(dic_audio.keys()):
+        command += f' -metadata:s:a:{index} language={language}'
+        command += f' -metadata:s:a:{index} title="{language.upper()}"'
+    command += f' "{folder_path}/{name}/{name}.mp4"'
+    os.system(command)
+
+    # Remove decrypted audio and video files
+    for filename in os.listdir(f"{folder_path}/{name}"):
+        if filename.startswith("decrypted-"):
+            os.remove(os.path.join(folder_path, name, filename))
+
+    # Add subtitles to the video
+    dic_subtitles = {}
+    for filename in os.listdir(f"{folder_path}/{name}"):
+        if filename.endswith(".srt"):
+            aux = filename.split(".")
+            language = aux[len(aux) - 2]
+            dic_subtitles[language] = filename
+    command = f'ffmpeg -i "{folder_path}/{name}/{name}.mp4"'
+    for index, (language, filename) in enumerate(dic_subtitles.items()):
+        command += f' -i "{folder_path}/{name}/{filename}"'
+    command += ' -map 0'
+    for index in range(len(dic_subtitles)):
+        command += f' -map {index + 1}'
+    command += ' -c copy -c:s mov_text'
+    for index, language in enumerate(dic_subtitles.keys()):
+        command += f' -metadata:s:s:{index} language={language}'
+        command += f' -metadata:s:s:{index} title="{language.upper()}"'
+    command += f' "{folder_path}/{name}/{name}_subtitles.mp4"'
+    os.system(command)
+
+    # Rename final video file
+    os.remove(f"{folder_path}/{name}/{name}.mp4")
+    os.rename(f"{folder_path}/{name}/{name}_subtitles.mp4", f"{folder_path}/{name}/{name}.mp4")
+    
+    # Clean up subtitle files
+    for filename in os.listdir(f"{folder_path}/{name}"):
+        if filename.endswith(".srt"):
+            os.remove(os.path.join(folder_path, name, filename))
+
+    print(f"Final video file saved to {folder_path}/{name}")
+
 if __name__ == "__main__":
     main()
